@@ -1,8 +1,8 @@
 Spree::Core::Engine.routes.draw do
 
-  root :to => 'products#index'
+  root :to => 'home#index'
 
-#  resources :products
+  resources :products
 
   match '/locale/set' => 'locale#set'
 
@@ -41,10 +41,10 @@ Spree::Core::Engine.routes.draw do
   end
 
   #   # Search routes
-#  match 's/*product_group_query' => 'products#index', :as => :simple_search
-#  match '/pg/:product_group_name' => 'products#index', :as => :pg_search
-#  match '/t/*id/s/*product_group_query' => 'taxons#show', :as => :taxons_search
-#  match 't/*id/pg/:product_group_name' => 'taxons#show', :as => :taxons_pg_search
+  match 's/*product_group_query' => 'products#index', :as => :simple_search
+  match '/pg/:product_group_name' => 'products#index', :as => :pg_search
+  match '/t/*id/s/*product_group_query' => 'taxons#show', :as => :taxons_search
+  match 't/*id/pg/:product_group_name' => 'taxons#show', :as => :taxons_pg_search
 
   #   # route globbing for pretty nested taxon and product paths
   match '/t/*id' => 'taxons#show', :as => :nested_taxons
