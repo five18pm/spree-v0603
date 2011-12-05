@@ -1,9 +1,5 @@
 class StateForShipments < ActiveRecord::Migration
-  def self.up
-    add_column "shipments", "state", :string
-  end
-
-  def self.down
-    remove_column "shipments", "state"
+  def change
+    add_column :shipments, :state, :string
   end
 end

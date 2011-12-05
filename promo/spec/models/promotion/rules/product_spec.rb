@@ -1,7 +1,7 @@
 require 'spec_helper'
 
-describe Promotion::Rules::Product do
-  let(:rule) { Promotion::Rules::Product.new }
+describe Spree::Promotion::Rules::Product do
+  let(:rule) { Spree::Promotion::Rules::Product.new }
 
   context "#eligible_products" do
     it "should return products from products group product_group if it exists" do
@@ -22,7 +22,7 @@ describe Promotion::Rules::Product do
   end
 
   context "#eligible?(order)" do
-    let(:order) { Order.new }
+    let(:order) { Spree::Order.new }
 
     it "should be eligible if there are no products" do
       rule.stub(:eligible_products => [])
@@ -30,7 +30,7 @@ describe Promotion::Rules::Product do
     end
 
     before do
-      3.times { |i| instance_variable_set("@product#{i}", mock_model(Product)) }
+      3.times { |i| instance_variable_set("@product#{i}", mock_model(Spree::Product)) }
     end
 
     context "with 'any' match policy" do

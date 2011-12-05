@@ -1,4 +1,4 @@
-class Spree::BaseController < ActionController::Base
-  include SpreeBase
-  include SpreeRespondWith
+class Spree::BaseController < ApplicationController
+  include Spree::Core::ControllerHelpers
+  include Spree::Core::RespondWith
 end

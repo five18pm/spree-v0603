@@ -1,11 +1,10 @@
 class MoveSpecialInstructionsToOrders < ActiveRecord::Migration
-  def self.up
+  def up
     add_column :orders, :special_instructions, :text
-
-    ActiveRecord::Base.connection.execute("update orders set special_instructions = (select special_instructions from checkouts where order_id = orders.id)")
+    execute "UPDATE orders SET special_instructions = (SELECT special_instructions FROM checkouts WHERE order_id = orders.id)"
   end
 
-  def self.down
+  def down
     remove_column :orders, :special_instructions, :text
   end
 end

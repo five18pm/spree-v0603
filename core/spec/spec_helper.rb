@@ -8,7 +8,11 @@ require 'rspec/rails'
 # in ./support/ and its subdirectories.
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each {|f| require f}
 
-require 'spree_core/testing_support/factories'
+require 'database_cleaner'
+require 'spree/core/testing_support/factories'
+require 'spree/core/testing_support/env'
+require 'spree/url_helpers'
+
 
 RSpec.configure do |config|
   # == Mock Framework
@@ -26,14 +30,62 @@ RSpec.configure do |config|
   # If you're not using ActiveRecord, or you'd prefer not to run each of your
   # examples within a transaction, comment the following line or assign false
   # instead of true.
-  config.use_transactional_fixtures = true
+  config.use_transactional_fixtures = false
+
+  config.before(:each) do
+    if example.metadata[:js]
+      DatabaseCleaner.strategy = :truncation, { :except => ['spree_countries', 'spree_zone_members', 'spree_states', 'spree_roles'] }
+    else
+      DatabaseCleaner.strategy = :transaction
+    end
+  end
+
+  config.before(:each) do
+    DatabaseCleaner.start
+    reset_spree_preferences
+  end
+
+  config.after(:each) do
+    DatabaseCleaner.clean
+  end
+
+  config.include Spree::UrlHelpers
 end
 
-@configuration ||= AppConfiguration.find_or_create_by_name("Default configuration")
+shared_context "custom products" do
+  before(:each) do
+    reset_spree_preferences do |config|
+      config.allow_backorders = true
+    end
 
-PAYMENT_STATES = Payment.state_machine.states.keys unless defined? PAYMENT_STATES
-SHIPMENT_STATES = Shipment.state_machine.states.keys unless defined? SHIPMENT_STATES
-ORDER_STATES = Order.state_machine.states.keys unless defined? ORDER_STATES
+    taxonomy = Factory(:taxonomy, :name => 'Categories')
+    root = taxonomy.root
+    clothing_taxon = Factory(:taxon, :name => 'Clothing', :parent_id => root.id)
+    bags_taxon = Factory(:taxon, :name => 'Bags', :parent_id => root.id)
+    mugs_taxon = Factory(:taxon, :name => 'Mugs', :parent_id => root.id)
+
+    taxonomy = Factory(:taxonomy, :name => 'Brands')
+    root = taxonomy.root
+    apache_taxon = Factory(:taxon, :name => 'Apache', :parent_id => root.id)
+    rails_taxon = Factory(:taxon, :name => 'Ruby on Rails', :parent_id => root.id)
+    ruby_taxon = Factory(:taxon, :name => 'Ruby', :parent_id => root.id)
+
+    Factory(:custom_product, :name => 'Ruby on Rails Ringer T-Shirt', :price => '17.99', :taxons => [rails_taxon, clothing_taxon])
+    Factory(:custom_product, :name => 'Ruby on Rails Mug', :price => '13.99', :taxons => [rails_taxon, mugs_taxon])
+    Factory(:custom_product, :name => 'Ruby on Rails Tote', :price => '15.99', :taxons => [rails_taxon, bags_taxon])
+    Factory(:custom_product, :name => 'Ruby on Rails Bag', :price => '22.99', :taxons => [rails_taxon, bags_taxon])
+    Factory(:custom_product, :name => 'Ruby on Rails Baseball Jersey', :price => '19.99', :taxons => [rails_taxon, clothing_taxon])
+    Factory(:custom_product, :name => 'Ruby on Rails Stein', :price => '16.99', :taxons => [rails_taxon, mugs_taxon])
+    Factory(:custom_product, :name => 'Ruby on Rails Jr. Spaghetti', :price => '19.99', :taxons => [rails_taxon, clothing_taxon])
+    Factory(:custom_product, :name => 'Ruby Baseball Jersey', :price => '19.99', :taxons => [ruby_taxon, clothing_taxon])
+    Factory(:custom_product, :name => 'Apache Baseball Jersey', :price => '19.99', :taxons => [apache_taxon, clothing_taxon])
+  end
+end
+
+
+PAYMENT_STATES = Spree::Payment.state_machine.states.keys unless defined? PAYMENT_STATES
+SHIPMENT_STATES = Spree::Shipment.state_machine.states.keys unless defined? SHIPMENT_STATES
+ORDER_STATES = Spree::Order.state_machine.states.keys unless defined? ORDER_STATES
 
 # Usage:
 #

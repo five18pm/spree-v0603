@@ -1,19 +1,20 @@
 require 'active_record'
-require 'custom_fixtures'
+require 'spree/core/custom_fixtures'
 
 namespace :db do
-  desc "Loads a specified fixture using rake db:load_file[filename.rb]"
-  task :load_file , [:file] => :environment do |t , args|
-    file = args.file
-    ext = File.extname file
-    if ext == ".csv" or ext == ".yml"
-      puts "loading fixture " + file
-      Spree::Fixtures.create_fixtures(File.dirname(file) , File.basename(file, '.*') )
-    else
-      if File.exists? file
-        puts "loading ruby    " + file
-        require file
-      end
+  desc %q{Loads a specified fixture file:
+For .yml/.csv use rake db:load_file[spree/filename.yml, /absolute/path/to/parent/]
+For .rb       use rake db:load_file[/absolute/path/to/sample/filename.rb]}
+
+  task :load_file , [:file, :dir] => :environment do |t , args|
+    file = Pathname.new(args.file)
+
+    if %w{.csv .yml}.include? file.extname
+      puts "loading fixture #{Pathname.new(args.dir).join(file)}"
+      Spree::Core::Fixtures.create_fixtures(args.dir, file.to_s.sub(file.extname, ""))
+    elsif file.exist?
+      puts "loading ruby #{file}"
+      require file
     end
   end
 
@@ -24,17 +25,17 @@ namespace :db do
 
     fixtures = ActiveSupport::OrderedHash.new
     ruby_files = ActiveSupport::OrderedHash.new
-    Dir.glob(File.join(dir , '*.{yml,csv,rb}')).each do |fixture_file|
+    Dir.glob(File.join(dir , '**/*.{yml,csv,rb}')).each do |fixture_file|
       ext = File.extname fixture_file
       if ext == ".rb"
-        ruby_files[File.basename(fixture_file, '.*')]  = fixture_file
+        ruby_files[File.basename(fixture_file, '.*')] = fixture_file
       else
-        fixtures[File.basename(fixture_file, '.*')]  = fixture_file
+        fixtures[fixture_file.sub(dir, "")[1..-1]] = fixture_file
       end
     end
-    fixtures.sort.each do |fixture , fixture_file|
+    fixtures.sort.each do |relative_path , fixture_file|
       # an invoke will only execute the task once
-      Rake::Task["db:load_file"].execute( Rake::TaskArguments.new([:file], [fixture_file]) )
+      Rake::Task["db:load_file"].execute( Rake::TaskArguments.new([:file, :dir], [relative_path, dir]) )
     end
     ruby_files.sort.each do |fixture , ruby_file|
       # an invoke will only execute the task once
@@ -85,7 +86,7 @@ namespace :db do
       model.reset_column_information
     end
 
-    load_defaults  = Country.count == 0
+    load_defaults  = Spree::Country.count == 0
     unless load_defaults    # ask if there are already Countries => default data hass been loaded
       load_defaults = agree('Countries present, load sample data anyways? [y/n]: ')
     end
@@ -93,7 +94,7 @@ namespace :db do
       Rake::Task["db:seed"].invoke
     end
 
-    if Rails.env.production? and Product.count > 0
+    if Rails.env.production? and Spree::Product.count > 0
       load_sample = agree("WARNING: In Production and products exist in database, load sample data anyways? [y/n]:" )
     else
       load_sample = true if ENV['AUTO_ACCEPT']

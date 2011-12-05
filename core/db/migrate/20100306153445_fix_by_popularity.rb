@@ -1,8 +1,9 @@
 class FixByPopularity < ActiveRecord::Migration
-  def self.up
-    ProductScope.update_all("name='descend_by_popularity'", "name='by_popularity'")
+  def up
+    execute("UPDATE product_scopes SET name='descend_by_popularity' WHERE name='by_popularity'")
   end
 
-  def self.down
+  def down
+    execute("UPDATE product_scopes SET name='by_popularity' WHERE name='descend_by_popularity'")
   end
 end

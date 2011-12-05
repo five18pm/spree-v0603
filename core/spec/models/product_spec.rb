@@ -1,8 +1,12 @@
 require 'spec_helper'
 
-describe Product do
+describe Spree::Product do
+  before(:each) do
+    reset_spree_preferences
+  end
 
   context "shoulda validations" do
+    let(:product) {Factory(:product)}
     it { should belong_to(:tax_category) }
     it { should belong_to(:shipping_category) }
     it { should have_many(:product_option_types) }
@@ -12,22 +16,12 @@ describe Product do
     it { should have_many(:images) }
     it { should have_and_belong_to_many(:product_groups) }
     it { should have_and_belong_to_many(:taxons) }
-    it { should validate_presence_of(:price) }
+    it "should validate price" do
+      product.should be_valid
+    end
+    # it { should validate_presence_of(:price) }
     it { should validate_presence_of(:permalink) }
     it { should have_valid_factory(:product) }
-  end
-
-  context "factory_girl" do
-    let(:product) { Factory(:product) }
-    it 'should have a saved product record' do
-      product.new_record?.should be_false
-    end
-    it 'should have zero properties record' do
-      product.product_properties.size.should == 0
-    end
-    it 'should have a master variant' do
-      product.master.should be_true
-    end
   end
 
   context "validations" do
@@ -64,34 +58,13 @@ describe Product do
   end
 
   context "scopes" do
-    context ".master_price_lte" do
-      it 'produces correct sql' do
-        sql = %Q{SELECT "products".* FROM "products" INNER JOIN "variants" ON "variants"."product_id" = "products"."id" AND variants.is_master = 't' AND variants.deleted_at IS NULL WHERE (variants.price <= 10)}
-        Product.master_price_lte(10).to_sql.gsub('`', '"').sub(/1\b/, "'t'").should == sql.gsub('`', '"').sub(/1\b/, "'t'")
-      end
-    end
-
-    context ".master_price_gte" do
-      it 'produces correct sql' do
-        sql = %Q{SELECT "products".* FROM "products" INNER JOIN "variants" ON "variants"."product_id" = "products"."id" AND variants.is_master = 't' AND variants.deleted_at IS NULL WHERE (variants.price >= 10)}
-        Product.master_price_gte(10).to_sql.gsub('`', '"').sub(/1\b/, "'t'").should == sql.gsub('"', '"').sub(/1\b/, "'t'")
-      end
-    end
-
-    context ".price_between" do
-      it 'produces correct sql' do
-        sql = %Q{SELECT "products".* FROM "products" INNER JOIN "variants" ON "variants"."product_id" = "products"."id" AND variants.is_master = 't' AND variants.deleted_at IS NULL WHERE (variants.price BETWEEN 10 AND 20)}
-        Product.price_between(10, 20).to_sql.gsub('`', '"').sub(/1\b/, "'t'").should == sql.gsub('`', '"').sub(/1\b/, "'t'")
-      end
-    end
-
     context ".group_by_products_id.count" do
       let(:product) { Factory(:product) }
       it 'produces a properly formed ordered-hash key' do
         expected_key = (ActiveRecord::Base.connection.adapter_name == 'PostgreSQL') ?
-          Product.column_names.map{|col_name| product.send(col_name)} :
+          Spree::Product.column_names.map{|col_name| product.send(col_name)} :
           product.id
-        count_key = Product.group_by_products_id.count.keys.first
+        count_key = Spree::Product.group_by_products_id.count.keys.first
         [expected_key, count_key].each{|val| val.map!{|e| e.is_a?(Time) ? e.strftime("%Y-%m-%d %H:%M:%S") : e} if val.respond_to?(:map!)}
         count_key.should == expected_key
       end
@@ -100,50 +73,75 @@ describe Product do
   end
 
   context '#add_properties_and_option_types_from_prototype' do
-    let!(:prototype) { Factory(:prototype) }
-    let(:product) { Factory(:product, :prototype_id => prototype.id) }
+    let!(:property) { stub_model(Spree::Property) }
+
+    let!(:prototype) do
+      prototype = stub_model(Spree::Prototype)
+      prototype.stub :properties => [property]
+      prototype.stub :option_types => [stub_model(Spree::OptionType)] 
+      prototype
+    end
+
+    let(:product) do
+      product = stub_model(Spree::Product, :prototype_id => prototype.id)
+      # The `set_master_variant_defaults` callback requires a master
+      product.stub :master => stub_model(Spree::Variant)
+      product
+    end
+
     it 'should have one property' do
-      product.product_properties.size.should == 1
+      Spree::Prototype.stub :find_by_id => prototype
+      product.product_properties.should_receive(:create).with(:property => property)
+      product.should_receive(:option_types=).with(prototype.option_types)
+      product.run_callbacks(:create)
     end
   end
 
   context '#has_stock?' do
-    let(:product) { Factory(:product) }
+    let(:product) do
+      product = stub_model(Spree::Product)
+      product.stub :master => stub_model(Spree::Variant)
+      product
+    end
+
     context 'nothing in stock' do
       before do
         Spree::Config.set :track_inventory_levels => true
-        product.master.update_attribute(:on_hand, 0)
+        product.master.stub :on_hand => 0
       end
       specify { product.has_stock?.should be_false }
     end
+
     context 'master variant has items in stock' do
       before do
         product.master.on_hand = 100
       end
       specify { product.has_stock?.should be_true }
     end
+
     context 'variant has items in stock' do
       before do
         Spree::Config.set :track_inventory_levels => true
-        product.master.update_attribute(:on_hand, 0)
-        Factory(:variant, :product => product, :on_hand => 100, :is_master => false, :deleted_at => nil)
-        product.reload
+        product.master.stub :on_hand => 0
+        product.stub :variants => [stub_model(Spree::Variant, :on_hand => 100)]
       end
       specify { product.has_stock?.should be_true }
     end
   end
 
   context '#effective_tax_rate' do
-    let(:product) { Factory(:product) }
+    let(:product) { stub_model(Spree::Product) }
 
     it 'should check tax category for applicable rates' do
-      TaxCategory.any_instance.should_receive(:effective_amount)
+      tax_category = double("Tax Category")
+      product.stub :tax_category => tax_category
+      tax_category.should_receive(:effective_amount)
       product.effective_tax_rate
     end
 
     it 'should return default tax rate when no tax category is defined' do
-      product.update_attribute(:tax_category, nil)
-      product.effective_tax_rate.should == TaxRate.default
+      product.stub :tax_category => nil
+      product.effective_tax_rate.should == Spree::TaxRate.default
     end
 
   end

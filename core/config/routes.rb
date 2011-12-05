@@ -1,4 +1,4 @@
-Rails.application.routes.draw do
+Spree::Core::Engine.routes.draw do
 
   root :to => 'products#index'
 
@@ -15,10 +15,6 @@ Rails.application.routes.draw do
   match '/checkout/:state' => 'checkout#edit', :as => :checkout_state
   match '/checkout' => 'checkout#edit', :state => 'address', :as => :checkout
 
-  # non-restful admin checkout stuff
-  match '/admin/orders/:order_number/checkout' => 'admin/checkout#update', :method => :post, :as => :admin_orders_checkout
-  match '/admin/orders/:order_number/checkout/(:state)' => 'admin/checkout#edit', :method => :get, :as => :admin_orders_checkout
-
   resources :orders do
     post :populate, :on => :collection
 
@@ -33,9 +29,9 @@ Rails.application.routes.draw do
     end
 
   end
-  match '/cart', :to => 'orders#edit', :via => :get, :as => :cart
-  match '/cart', :to => 'orders#update', :via => :put, :as => :update_cart
-  match '/cart/empty', :to => 'orders#empty', :via => :put, :as => :empty_cart
+  get '/cart', :to => 'orders#edit', :as => :cart
+  put '/cart', :to => 'orders#update', :as => :update_cart
+  put '/cart/empty', :to => 'orders#empty', :as => :empty_cart
 
   resources :shipments do
     member do
@@ -137,8 +133,9 @@ Rails.application.routes.draw do
         get :fire
         post :resend
         get :history
-        get :user
       end
+
+      resource :customer, :controller => "orders/customer_details"
 
       resources :adjustments
       resources :line_items
@@ -159,7 +156,11 @@ Rails.application.routes.draw do
       end
     end
 
-    resource :general_settings
+    resource :general_settings do
+      collection do
+        post :dismiss_alert
+      end
+    end
 
     resources :taxonomies do
       member do

@@ -1,5 +1,5 @@
 class RefactorAdjustments < ActiveRecord::Migration
-  def self.up
+  def up
     change_table :adjustments do |t|
       t.boolean :mandatory
       t.boolean :frozen
@@ -13,7 +13,17 @@ class RefactorAdjustments < ActiveRecord::Migration
     end
   end
 
-  def self.down
-    # no going back
+  def down
+    change_table :adjustments do |t|
+      t.integer :position
+      t.rename :label, :description
+      t.string :type
+      t.remove :originator_type
+      t.remove :originator_id
+      t.rename :source_type, :adjustment_source_type
+      t.rename :source_id, :adjustment_source_id
+      t.remove :frozen
+      t.remove :mandatory
+    end
   end
 end

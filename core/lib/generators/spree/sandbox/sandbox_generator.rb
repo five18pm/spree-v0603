@@ -6,8 +6,10 @@ module Spree
 
     class_option :database, :default => ''
 
-    # skip cucumber environment for sandbox
-    def cucumber_environment
+    def self.source_paths
+      paths = self.superclass.source_paths
+      paths.unshift File.expand_path('../templates', __FILE__)
+      paths.flatten
     end
 
     protected

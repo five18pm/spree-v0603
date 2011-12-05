@@ -1,6 +1,6 @@
 class DeleteInProgressOrders < ActiveRecord::Migration
-  def self.up
-    Order.delete_all(:state=>'in_progress')
+  def up
+    execute("DELETE FROM orders WHERE orders.state = 'in_progress'")
     delete_orphans('adjustments')
     delete_orphans('checkouts')
     delete_orphans('shipments')
@@ -9,10 +9,11 @@ class DeleteInProgressOrders < ActiveRecord::Migration
     delete_orphans('inventory_units')
   end
 
-  def self.delete_orphans(table_name)
-    execute("delete from #{table_name} where order_id not in (select id from orders)")
+  def down
   end
 
-  def self.down
-  end
+  private
+    def delete_orphans(table_name)
+      execute "DELETE FROM #{table_name} WHERE order_id NOT IN (SELECT id FROM orders)"
+    end
 end

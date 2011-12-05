@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe Creditcard do
+describe Spree::Creditcard do
 
   context 'validation' do
     it { should have_valid_factory(:creditcard) }
@@ -11,13 +11,13 @@ describe Creditcard do
   before(:each) do
 
     @order = Factory(:order)
-    @creditcard = Creditcard.new
-    @payment = Payment.create(:amount => 100, :order => @order)
+    @creditcard = Spree::Creditcard.new
+    @payment = Spree::Payment.create(:amount => 100, :order => @order)
 
     @success_response = mock('gateway_response', :success? => true, :authorization => '123', :avs_result => {'code' => 'avs-code'})
     @fail_response = mock('gateway_response', :success? => false)
 
-    @payment_gateway = mock_model(PaymentMethod,
+    @payment_gateway = mock_model(Spree::PaymentMethod,
       :payment_profiles_supported? => true,
       :authorize => @success_response,
       :purchase => @success_response,
@@ -59,7 +59,7 @@ describe Creditcard do
     context "when gateway does not match the environment" do
       it "should raise an exception" do
         @payment_gateway.stub :environment => "foo"
-        lambda {@creditcard.authorize(100, @payment)}.should raise_error(Spree::GatewayError)
+        lambda {@creditcard.authorize(100, @payment)}.should raise_error(Spree::Core::GatewayError)
       end
     end
 
@@ -81,7 +81,7 @@ describe Creditcard do
         @payment.should_not_receive(:pend)
         lambda{
           @creditcard.authorize(100, @payment)
-        }.should raise_error(Spree::GatewayError)
+        }.should raise_error(Spree::Core::GatewayError)
       end
     end
   end
@@ -98,7 +98,7 @@ describe Creditcard do
     context "when gateway does not match the environment" do
      it "should raise an exception" do
        @payment_gateway.stub :environment => "foo"
-       lambda {@creditcard.purchase(100, @payment)}.should raise_error(Spree::GatewayError)
+       lambda {@creditcard.purchase(100, @payment)}.should raise_error(Spree::Core::GatewayError)
      end
     end
     context "if sucessfull" do
@@ -122,7 +122,7 @@ describe Creditcard do
        @payment.should_not_receive(:pend)
        lambda{
          @creditcard.purchase(100, @payment)
-       }.should raise_error(Spree::GatewayError)
+       }.should raise_error(Spree::Core::GatewayError)
      end
     end
   end
@@ -164,7 +164,7 @@ describe Creditcard do
       context "when gateway does not match the environment" do
        it "should raise an exception" do
          @payment_gateway.stub :environment => "foo"
-         lambda {@creditcard.capture(@payment)}.should raise_error(Spree::GatewayError)
+         lambda {@creditcard.capture(@payment)}.should raise_error(Spree::Core::GatewayError)
        end
       end
       context "if sucessfull" do
@@ -184,7 +184,7 @@ describe Creditcard do
          @payment.should_not_receive(:complete)
          lambda{
            @creditcard.capture(@payment)
-         }.should raise_error(Spree::GatewayError)
+         }.should raise_error(Spree::Core::GatewayError)
        end
       end
     end
@@ -230,7 +230,7 @@ describe Creditcard do
     context "when gateway does not match the environment" do
       it "should raise an exception" do
         @payment_gateway.stub :environment => "foo"
-        lambda {@creditcard.void(@payment)}.should raise_error(Spree::GatewayError)
+        lambda {@creditcard.void(@payment)}.should raise_error(Spree::Core::GatewayError)
       end
     end
     context "if sucessfull" do
@@ -250,7 +250,7 @@ describe Creditcard do
         @payment.should_not_receive(:void)
         lambda {
           @creditcard.void(@payment)
-        }.should raise_error(Spree::GatewayError)
+        }.should raise_error(Spree::Core::GatewayError)
       end
     end
   end
@@ -315,13 +315,13 @@ describe Creditcard do
     context "when gateway does not match the environment" do
       it "should raise an exception" do
         @payment_gateway.stub :environment => "foo"
-        lambda {@creditcard.credit(@payment)}.should raise_error(Spree::GatewayError)
+        lambda {@creditcard.credit(@payment)}.should raise_error(Spree::Core::GatewayError)
       end
     end
 
     context "when response is sucesssful" do
       it "should create an offsetting payment" do
-        Payment.should_receive(:create)
+        Spree::Payment.should_receive(:create)
         @creditcard.credit(@payment)
       end
       context "resulting payment" do
@@ -346,32 +346,36 @@ describe Creditcard do
     context "when response is unsucessfull" do
       it "should not create a payment" do
         @payment_gateway.stub(:credit).and_return(@fail_response)
-        Payment.should_not_receive(:create)
+        Spree::Payment.should_not_receive(:create)
         lambda {
           @creditcard.credit(@payment)
-        }.should raise_error(Spree::GatewayError)
+        }.should raise_error(Spree::Core::GatewayError)
       end
     end
   end
 
-  let(:creditcard) { Creditcard.new }
+  let(:creditcard) { Spree::Creditcard.new }
 
   context "#can_capture?" do
     it "should be true if payment state is pending" do
-      payment = mock_model(Payment, :state => 'pending', :created_at => Time.now)
+      payment = mock_model(Spree::Payment, :state => 'pending', :created_at => Time.now)
       creditcard.can_capture?(payment).should be_true
     end
 
     (PAYMENT_STATES - ['pending']).each do |state|
       it "should be false if payment state is #{state}" do
-        payment = mock_model(Payment, :state => state, :created_at => Time.now)
+        payment = mock_model(Spree::Payment, :state => state, :created_at => Time.now)
         creditcard.can_capture?(payment).should be_false
       end
     end
   end
 
   context "when transaction is more than 12 hours old" do
-    let(:payment) { mock_model(Payment, :state => "completed", :created_at => Time.now - 14.hours, :amount => 99.00, :credit_allowed => 100.00, :order => mock_model(Order, :payment_state => 'credit_owed')) }
+    let(:payment) { mock_model(Spree::Payment, :state => "completed",
+                                               :created_at => Time.now - 14.hours,
+                                               :amount => 99.00,
+                                               :credit_allowed => 100.00,
+                                               :order => mock_model(Spree::Order, :payment_state => 'credit_owed')) }
 
     context "#can_credit?" do
 
@@ -415,7 +419,7 @@ describe Creditcard do
   end
 
   context "when transaction is less than 12 hours old" do
-    let(:payment) { mock_model(Payment, :state => 'completed') }
+    let(:payment) { mock_model(Spree::Payment, :state => 'completed') }
 
     context "#can_void?" do
       (PAYMENT_STATES - ['void']).each do |state|
@@ -449,7 +453,7 @@ describe Creditcard do
     it "should only validate on create" do
       @creditcard.attributes = valid_creditcard_attributes
       @creditcard.save
-      @creditcard = Creditcard.find(@creditcard.id)
+      @creditcard = Spree::Creditcard.find(@creditcard.id)
       @creditcard.should be_valid
     end
   end
@@ -458,7 +462,7 @@ describe Creditcard do
     before do
       @creditcard.attributes = valid_creditcard_attributes
       @creditcard.save
-      @creditcard = Creditcard.find(@creditcard.id)
+      @creditcard = Spree::Creditcard.find(@creditcard.id)
     end
 
     it "should not actually store the number" do

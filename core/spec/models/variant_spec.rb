@@ -1,10 +1,29 @@
 require 'spec_helper'
 
-describe Variant do
-  let(:variant) { Variant.new(:count_on_hand => 95) }
+describe Spree::Variant do
+  let!(:variant) { Factory(:variant, :count_on_hand => 95) }
+
+  before(:each) do
+    reset_spree_preferences
+  end
 
   context "validations" do
     it { should have_valid_factory(:variant) }
+
+    it "should validate price is numeric" do
+      variant.price = "aaa"
+      variant.should be_invalid
+    end
+
+    it "should validate price is greater than 0" do
+      variant.price = -1
+      variant.should be_invalid
+    end
+
+    it "should validate price is 0" do
+      variant.price = 0
+      variant.should be_valid
+    end
   end
 
   context "on_hand=" do
@@ -15,7 +34,7 @@ describe Variant do
 
       context "and count is increased" do
         before { variant.inventory_units.stub(:with_state).and_return([]) }
-        let(:inventory_unit) { mock_model(InventoryUnit, :state => "backordered") }
+        let(:inventory_unit) { mock_model(Spree::InventoryUnit, :state => "backordered") }
 
         it "should change count_on_hand to given value" do
           variant.on_hand = 100
@@ -23,23 +42,29 @@ describe Variant do
         end
 
         it "should check for backordered units" do
+          variant.save!
           variant.inventory_units.should_receive(:with_state).with("backordered")
           variant.on_hand = 100
+          variant.save!
         end
 
         it "should fill 1 backorder when count_on_hand is zero" do
           variant.count_on_hand = 0
+          variant.save!
           variant.inventory_units.stub(:with_state).and_return([inventory_unit])
           inventory_unit.should_receive(:fill_backorder)
           variant.on_hand = 100
+          variant.save!
           variant.count_on_hand.should == 99
         end
 
         it "should fill multiple backorders when count_on_hand is negative" do
           variant.count_on_hand = -5
+          variant.save!
           variant.inventory_units.stub(:with_state).and_return(Array.new(5, inventory_unit))
           inventory_unit.should_receive(:fill_backorder).exactly(5).times
           variant.on_hand = 100
+          variant.save!
           variant.count_on_hand.should == 95
         end
 
@@ -86,7 +111,7 @@ describe Variant do
       before { Spree::Config.set :track_inventory_levels => false }
 
       it "should return nil" do
-        variant.on_hand.should == nil
+        variant.on_hand.should be_nil
       end
 
     end

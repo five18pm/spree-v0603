@@ -1,10 +1,10 @@
 require 'spec_helper'
 
-describe Gateway::Braintree do
+describe Spree::Gateway::Braintree do
 
   before(:each) do
-    Gateway.update_all(:active => false)
-    @gateway = Gateway::Braintree.create!(:name => "Braintree Gateway", :environment => "test", :active => true)
+    Spree::Gateway.update_all :active => false
+    @gateway = Spree::Gateway::Braintree.create!(:name => "Braintree Gateway", :environment => "test", :active => true)
 
     @gateway.set_preference(:merchant_id, "zbn5yzq9t7wmwx42" )
     @gateway.set_preference(:public_key, "ym9djwqpkxbv3xzt")
@@ -35,10 +35,6 @@ describe Gateway::Braintree do
 
   pending "should be braintree gateway" do
     @gateway.provider_class.should == ::ActiveMerchant::Billing::BraintreeGateway
-  end
-
-  pending "should be the Blue Braintree" do
-    @gateway.provider.class.should == ::ActiveMerchant::Billing::BraintreeBlueGateway
   end
 
   describe "authorize" do
@@ -101,7 +97,7 @@ describe Gateway::Braintree do
       # transaction.status.should == Braintree::Transaction::Status::SubmittedForSettlement
       # lambda do
       #   @payment.payment_source.capture(@payment)
-      # end.should raise_error(Spree::GatewayError, "Cannot submit for settlement unless status is authorized. (91507)")
+      # end.should raise_error(Spree::Core::GatewayError, "Cannot submit for settlement unless status is authorized. (91507)")
     end
   end
 
@@ -182,14 +178,14 @@ describe Gateway::Braintree do
   end
 
   def with_payment_profiles_off(&block)
-    Gateway::Braintree.class_eval do
+    Spree::Gateway::Braintree.class_eval do
       def payment_profiles_supported?
         false
       end
     end
     yield
   ensure
-    Gateway::Braintree.class_eval do
+    Spree::Gateway::Braintree.class_eval do
       def payment_profiles_supported?
         true
       end

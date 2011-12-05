@@ -1,24 +1,9 @@
 require 'spec_helper'
 
-describe Adjustment do
+describe Spree::Adjustment do
 
-  context 'validations' do
-    it { should have_valid_factory(:adjustment) }
-  end
-
-  context "factory_girl" do
-    before do
-      Order.delete_all
-      @order = Factory(:order)
-      @adjustment = Factory(:adjustment, :order => @order)
-    end
-    it 'should refer to the order that was passed to the factory' do
-      @adjustment.order.id.should == @order.id
-    end
-  end
-
-  let(:order) { mock_model(Order, :update! => nil) }
-  let(:adjustment) { Adjustment.new }
+  let(:order) { mock_model(Spree::Order, :update! => nil) }
+  let(:adjustment) { Spree::Adjustment.new }
   it "should accept a negative amount"
 
   context "#update!" do
@@ -87,7 +72,7 @@ describe Adjustment do
 
   context "#save" do
     it "should call order#update!" do
-      adjustment = Adjustment.new(:order => order, :amount => 10, :label => "Foo")
+      adjustment = Spree::Adjustment.new(:order => order, :amount => 10, :label => "Foo")
       order.should_receive(:update!)
       adjustment.save
     end
@@ -99,11 +84,11 @@ describe Adjustment do
       specify { adjustment.should be_eligible_for_originator }
     end
     context "with originator that doesn't have 'eligible?'" do
-      before { adjustment.originator = mock_model('TaxRate') }
+      before { adjustment.originator = mock_model(Spree::TaxRate) }
       specify { adjustment.should be_eligible_for_originator }
     end
     context "with originator that has 'eligible?'" do
-      let(:originator) { TaxRate.new }
+      let(:originator) { Spree::TaxRate.new }
       before { adjustment.originator = originator }
       context "and originator is eligible for order" do
         before { originator.stub(:eligible? => true) }

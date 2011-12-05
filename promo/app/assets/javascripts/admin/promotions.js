@@ -48,29 +48,6 @@ var initProductActions = function(){
   // CreateLineItems Promotion Action
   //
   ( function(){
-    // Autocomplete product and populate variant select
-    if($('.promotion_action.create_line_items ').is('*')){
-      $(".promotion_action.create_line_items input[name='add_product_name']").autocomplete("/admin/products.json?authenticity_token=" + $('meta[name=csrf-token]').attr("content"), {
-        parse: prep_autocomplete_data,
-        formatItem: function(item) {
-          return format_autocomplete(item);
-        }
-      }).result(function(event, data, formatted) {
-        if(data){
-          // $('#add_product_id').val(data.product.id);
-          var url = "/admin/products/" + data.product.permalink + "/variants.json?authenticity_token=" + $('meta[name=csrf-token]').attr("content");
-          var $variant_select = $("select[name='add_line_item_variant_id']");
-          $variant_select.html('');
-          $.getJSON(url, {}, function(variants_data){
-            $.each(variants_data, function(){
-              $variant_select.append($("<option />").val(this.id).text(this.label));
-            });
-          });
-        }
-      }
-      );
-    }
-
     var hideOrShowItemTables = function(){
       $('.promotion_action table').each(function(){
         if($(this).find('td').length == 0){
@@ -99,15 +76,14 @@ var initProductActions = function(){
     };
     setupRemoveLineItems();
     // Add line item to list
-    $(".promotion_action.create_line_items button.add").click(function(){
+    $(".promotion_action.create_line_items button.add").live('click',function(e){
       var $container = $(this).parents('.promotion_action');
       var product_name = $container.find("input[name='add_product_name']").val();
-      var variant_id = $container.find("select[name='add_line_item_variant_id']").val();
-      var variant_name = $container.find("select[name='add_line_item_variant_id'] option:selected").text();
+      var variant_id = $container.find("input[name='add_variant_id']").val();
       var quantity = $container.find("input[name='add_quantity']").val();
       if(variant_id){
         // Add to the table
-        var newRow = "<tr><td>" + product_name + "</td><td>" + variant_name + "</td><td>" + quantity + "</td><td><img src='/admin/images/icons/cross.png' /></td></tr>";
+        var newRow = "<tr><td>" + product_name + "</td><td>" + quantity + "</td><td><img src='/assets/admin/icons/cross.png' /></td></tr>";
         $container.find('table').append(newRow);
         // Add to serialized string in hidden text field
         var $hiddenField = $container.find("input[type='hidden']");

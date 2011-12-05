@@ -1,5 +1,4 @@
-User.class_eval do
-
+Spree::User.class_eval do
   def clear_api_key!
     self.update_attribute(:authentication_token, "")
   end
@@ -14,9 +13,7 @@ User.class_eval do
   #end
 
   private
-
-  def secure_digest(*args)
-    Digest::SHA1.hexdigest(args.flatten.join('--'))
-  end
-
+    def secure_digest(*args)
+      Digest::SHA1.hexdigest(args.flatten.join('--'))
+    end
 end

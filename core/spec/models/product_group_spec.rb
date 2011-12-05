@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe ProductGroup do
+describe Spree::ProductGroup do
 
   context "validations" do
     it { should validate_presence_of(:name) }
@@ -30,6 +30,29 @@ describe ProductGroup do
       it 'sets no product scopes' do
         subject.product_scopes.should be_empty
       end
+    end
+
+  end
+
+  # Regression test for #774
+  context "Regression test for #774" do
+    let!(:property) { Factory(:property, :name => "test") }
+    let!(:product) do
+      product = Factory(:product)
+      product.properties << property
+      product
+    end
+
+    let!(:product_group) do
+     product_group = Factory(:product_group, :name => "Not sports")
+     product_group.product_scopes.create!(:name => "with_property", :arguments => ["test"])
+     product_group
+    end
+
+    it "updates a product group when a property is deleted" do
+      product_group.products.should include(product)
+      property.destroy
+      product_group.products(true).should_not include(product)
     end
 
   end

@@ -1,3 +1,3 @@
 Rails.application.routes.draw do
-  mount <%= lib_name.classify %>::Engine => "/"
+  <%= 'mount Spree::Core::Engine => "/"' if defined?(Spree::Core) %>
 end

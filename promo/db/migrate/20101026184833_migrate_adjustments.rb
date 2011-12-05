@@ -1,9 +1,9 @@
 class MigrateAdjustments < ActiveRecord::Migration
-  def self.up
-    execute("update adjustments set amount = 0.0 where amount is null")
-    execute("update adjustments set mandatory = 'true', locked = 'true'")
+  def up
+    execute "UPDATE spree_adjustments SET amount = 0.0 WHERE amount IS NULL"
+    execute "UPDATE spree_adjustments SET mandatory = 't' WHERE locked = 't'"
   end
 
-  def self.down
+  def down
   end
 end
